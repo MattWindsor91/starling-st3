@@ -1,12 +1,12 @@
 # Sublime Text support for Starling
 
 This repository contains syntax definitions and snippets for
-the [Starling]() verification language.
+the [Starling][] verification language.
 
 
 ## Licence
 
-MIT licence---see `LICENSE`.
+MIT licence—see `LICENSE`.
 
 
 ## Installation
