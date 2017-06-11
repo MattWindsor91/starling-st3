@@ -1,0 +1,11 @@
+<snippet>
+	<content><![CDATA[
+method ${1:lock}(${2:}) {
+	{| ${3:emp} |}
+		${4:;}
+	{| ${5:emp} |}
+}
+]]></content>
+	<tabTrigger>method</tabTrigger>
+	<scope>source.starling</scope>
+</snippet>

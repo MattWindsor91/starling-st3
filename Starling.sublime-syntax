@@ -1,0 +1,374 @@
+%YAML 1.2
+---
+name: Starling
+file_extensions: [cvf]
+scope: source.starling
+
+#
+# Starling syntax file for Sublime Text
+#
+# NOTE: this syntax definition is under development, and has quite a few
+# bugs and deficiencies: some known, some not known.
+#
+
+variables:
+  environments: 'thread|shared'
+  basic_types: 'int|bool'
+  control_keywords: 'do|else|for|if|while'
+  identifier: '[_a-zA-Z]([_0-9a-zA-Z])*'
+  view_start: '\{\|'
+  view_end: '\|\}'
+
+contexts:
+  prototype:
+    - include: comments
+
+  #
+  # Comments
+  #
+
+  block_comment:
+    - meta_scope: comment.block.starling
+    - match: /\*
+      scope: punctuation.definition.comment.starling
+      push: block_comment
+    - match: \*/
+      pop: true
+
+  comments:
+    - match: //
+      scope: punctuation.definition.comment.starling
+      push:
+        - meta_scope: comment.line.double-slash.starling
+        - match: \n
+          pop: true
+    - match: /\*
+      scope: punctuation.definition.comment.starling
+      push: block_comment
+
+  #
+  # Expressions
+  #
+
+  expression:
+    - include: literals
+    - include: symbolics
+    - include: operators
+    # Variable references
+    # TODO: function calls
+    - match: \b({{identifier}})\b
+      scope: variable.other.starling
+
+  operators:
+    - match: '\+\+|--|\+|-|%|/|\*'
+      scope: keyword.operator.arithmetic.starling
+    - match: '!=|==|>=|<=|>|<|!|=>|&&|\|\|'
+      scope: keyword.operator.logical.starling
+    - match: '='
+      scope: keyword.operator.assignment.starling
+
+  #
+  # Unsorted
+  #
+
+  typename:
+    - match: \b({{basic_types}})\b
+      scope: storage.type.starling
+      pop: true
+    - match: \b({{identifier}})\b
+      scope: entity.name.type.starling
+      pop: true
+
+  # Keywords available at the block level.
+  keywords_block:
+    - match: \b({{control_keywords}})\b
+      scope: keyword.control.starling
+
+  # Keywords available at the top level.
+  # Temporary (TODO: add pragma support)
+  keywords_top_level:
+      # temporary
+    - match: \b(pragma)\b
+      scope: keyword.control.starling
+
+  literals:
+    - match: \b([0-9]*(\.[0-9]+)?)\b
+      scope: constant.numeric
+    - match: \b(true|false)\b
+      scope: constant.language.boolean.starling
+
+  constraint_body:
+    - include: expression
+    - match: \;
+      scope: punctuation.terminator.constraint.starling
+      pop: true
+
+  constraint_view:
+    - meta_content_scope: string.view.starling
+    - match: ->
+      scope: punctuation.other.constraint_entail.starling
+      set: constraint_body
+
+  constraints:
+    - match: \b(constraint)\b
+      scope: keyword.other.starling
+      push: constraint_view
+
+  #
+  # Blocks and methods
+  #
+
+  # The inside of an atomic block.
+  atomic_block:
+    - meta_scope: meta.block
+    # Can't use views inside an atomic block.
+    # TODO: forbid views inside nonatomic nestings in atomic blocks too
+    - include: keywords_block
+    # TODO: handle expressions in a finer-grained way
+    - include: expression
+    # Enter an atomic block.
+    - match: <\|
+      scope: punctuation.section.block.begin
+      push: atomic_block
+    # Leave an atomic block.
+    - match: \|>
+      pop: true
+    # Enter a nonatomic block.
+    - match: \{
+      scope: punctuation.section.block.begin
+      push: block
+    # Can't leave a nonatomic block while we're not in one.
+    - match: \|>
+      scope: invalid.illegal.nonatomic_ending_atomic_block
+
+  # The inside of a nonatomic block.
+  block:
+    - meta_scope: meta.block
+    - include: views
+    - include: keywords_block
+    # Enter an atomic block.
+    - match: <\|
+      scope: punctuation.section.block.begin
+      push: atomic_block
+    # Can't leave an atomic block while we're not in one.
+    - match: \|>
+      scope: invalid.illegal.atomic_ending_nonatomic_block
+    # Enter another block.
+    - match: \{
+      scope: punctuation.section.block.begin
+      push: block
+    # Leave this block.
+    - match: \}
+      scope: punctuation.section.block.end
+      pop: true
+    # This must be down here to avoid <| and < ambiguities.
+    # TODO: handle expressions in a finer-grained way
+    - include: expression
+
+  # Matches the outermost block of a method.
+  method_body:
+    - meta_scope: meta.function
+    - match: \{
+      scope: [punctuation.section.block.begin]
+      set: block
+    # Anything else is not valid here.
+    - match: '\S'
+      scope: invalid.illegal.expected_method_body_here
+
+  # Wrapper around formal_param_list that applies the function scope.
+  method_formal_param_list:
+    - meta_scope: meta.function.parameters
+    - include: formal_param_list
+
+  method_name:
+    - meta_scope: meta.function
+    - match: \b({{identifier}})\b
+      scope: entity.name.function.starling
+      pop: true
+    # Anything else is not valid here.
+    - match: '\S'
+      scope: invalid.illegal.expected_method_name_here
+
+  methods:
+    - match: \b(method)\b
+      scope: keyword.other.method.starling
+      push: [method_body, method_formal_param_list, method_name]
+
+  #
+  # Views
+  #
+
+  # Matches and paints view assertions.
+  views:
+    - match: '{{view_start}}'
+      scope: [punctuation.definition.string.begin,
+              punctuation.section.braces.begin]
+      push:
+      - meta_scope: meta.braces
+      - meta_scope: string.view.starling
+      - match: '{{view_end}}'
+        scope: [punctuation.definition.string.end,
+                punctuation.section.braces.end]
+        pop: true
+
+  # Like 'views', but marks a view in an incorrect place.
+  # Used outside of methods, etc.
+  views_invalid:
+    - match: '{{view_start}}'
+      scope: [punctuation.definition.string.begin,
+              punctuation.section.braces.begin]
+      push:
+      - meta_scope: meta.braces
+      - meta_scope: string.view.starling
+      - meta_scope: invalid.illegal.view_not_allowed_here
+      - match: '{{view_end}}'
+        scope: [punctuation.definition.string.end,
+                punctuation.section.braces.end]
+        pop: true
+
+  #
+  # Function-like declarations
+  #
+
+  atom_terminator:
+    # At the end of an atom, we can either see `,` and go back into an
+    # atom, or see `;` and end the entire atom list.
+    - match: \,
+      # TODO: correct scope
+      scope: punctuation.separator.atom.starling
+      set: [atom_terminator, formal_param_list, atom_name_or_qualifiers]
+    - match: ;
+      scope: punctuation.terminator.atom.starling
+      pop: true
+
+  # Matches the aftermath of a formal parameter, which can either be
+  # another parameter or the end of the list.
+  formal_param_after_ident:
+    - match: \,
+      # TODO: correct scope
+      scope: punctuation.separator.param.starling
+      set: formal_param_type
+    - match: \)
+      # TODO: add scopes
+      pop: true
+
+  # The identifier component of a formal parameter.
+  formal_param_ident:
+    - match: \b({{identifier}})\b
+      # TODO: check scope
+      scope: variable.other.param.starling
+      pop: true
+    # Anything else is not valid here.
+    - match: '\S'
+      scope: invalid.illegal.expected_ident_here
+
+  # The type component of a formal parameter.
+  formal_param_type:
+    # TODO: deduplicate
+    - match: \b({{basic_types}})\b
+      scope: storage.type.starling
+      set: [formal_param_after_ident, formal_param_ident]
+    - match: \b({{identifier}})\b
+      scope: entity.name.type.starling
+      set: [formal_param_after_ident, formal_param_ident]
+    # Anything else is not valid here.
+    - match: '\S'
+      scope: invalid.illegal.expected_type_here
+
+  # Scope following `(` that can either admit `)` or a formal parameter
+  # list.
+  formal_param_list_begin:
+    - match: \)
+      pop: true
+    # The beginning of a formal parameter is its type.
+    - include: formal_param_type
+
+  formal_param_list:
+    - match: \(
+      # TODO: add scopes
+      set: formal_param_list_begin
+    # Anything else is not valid here.
+    - match: '\S'
+      scope: invalid.illegal.missing_param_list
+
+  #
+  # View atoms
+  #
+
+  atom_name_or_qualifiers:
+    - match: "iter"
+      scope: keyword.other.iter.starling
+    - match: \b({{identifier}})\b
+      scope: entity.name.atom.starling
+      pop: true
+    # Anything else is not valid here.
+    - match: '\S'
+      scope: invalid.illegal.expected_atom_name_here
+
+  atoms:
+    - match: \b(view)\b
+      scope: keyword.other.view.starling
+      set: [atom_terminator, formal_param_list, atom_name_or_qualifiers]
+
+  #
+  # Variable declarations
+  #
+
+  vardecl_after_typename:
+    - match: \b({{identifier}})\b
+      scope: variable.other.vardecl.starling
+    - match: \,
+      scope: punctuation.separator.vardecl.starling
+    - match: ;
+      scope: punctuation.terminator.vardecl.starling
+      pop: true
+
+  vardecls:
+    - match: \b({{environments}})\b
+      scope: storage.modifier.starling
+      set: [vardecl_after_typename, typename]
+
+  #
+  # Typedefs
+  #
+
+  typedefs:
+    - match: \b(typedef)\b
+      scope: keyword.control.starling
+      set: [typename, typename]
+
+  #
+  # Symbolics
+  #
+
+  symbolic_inner:
+    - meta_scope: string.quoted.other.symbolic.starling
+    # Symbolic interpolation
+    - match: '\[\|'
+      set:
+        - match: '\|\]'
+          set: symbolic_inner
+    # End of symbolic
+    - match: \}
+      scope: punctuation.definition.string.end
+      pop: true
+
+  symbolics:
+    - match: '%{'
+      scope: punctuation.definition.string.begin
+      push: symbolic_inner
+
+  #
+  # Top level
+  #
+
+  main:
+    - include: views_invalid
+    - include: types
+    - include: keywords_top_level
+    - include: literals
+    - include: constraints
+    - include: methods
+    - include: atoms
+    - include: vardecls
+    - include: typedefs
