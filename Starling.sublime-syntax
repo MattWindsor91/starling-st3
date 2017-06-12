@@ -12,12 +12,16 @@ scope: source.starling
 #
 
 variables:
-  environments: 'thread|shared'
-  basic_types: 'int|bool'
-  control_keywords: 'do|else|for|if|while'
+  environment: 'thread|shared'
+  basic_type: 'int|bool'
+  control_keyword: 'do|else|for|if|while'
+  truth_value: 'true|false'
   identifier: '[_a-zA-Z]([_0-9a-zA-Z])*'
+  atomic_start: '<\|'
+  atomic_end: '\|>'
   view_start: '\{\|'
   view_end: '\|\}'
+  number: '[0-9]*(\.[0-9]+)?'
 
 contexts:
   prototype:
@@ -72,7 +76,7 @@ contexts:
   #
 
   typename:
-    - match: \b({{basic_types}})\b
+    - match: \b({{basic_type}})\b
       scope: storage.type.starling
       pop: true
     - match: \b({{identifier}})\b
@@ -81,7 +85,7 @@ contexts:
 
   # Keywords available at the block level.
   keywords_block:
-    - match: \b({{control_keywords}})\b
+    - match: \b({{control_keyword}})\b
       scope: keyword.control.starling
 
   # Keywords available at the top level.
@@ -92,9 +96,9 @@ contexts:
       scope: keyword.control.starling
 
   literals:
-    - match: \b([0-9]*(\.[0-9]+)?)\b
+    - match: \b({{number}})\b
       scope: constant.numeric
-    - match: \b(true|false)\b
+    - match: \b({{truth_value}})\b
       scope: constant.language.boolean.starling
 
   constraint_body:
@@ -127,11 +131,11 @@ contexts:
     # TODO: handle expressions in a finer-grained way
     - include: expression
     # Enter an atomic block.
-    - match: <\|
+    - match: '{{atomic_start}}'
       scope: punctuation.section.block.begin
       push: atomic_block
     # Leave an atomic block.
-    - match: \|>
+    - match: '{{atomic_end}}'
       pop: true
     # Enter a nonatomic block.
     - match: \{
@@ -147,11 +151,11 @@ contexts:
     - include: views
     - include: keywords_block
     # Enter an atomic block.
-    - match: <\|
+    - match: '{{atomic_start}}'
       scope: punctuation.section.block.begin
       push: atomic_block
     # Can't leave an atomic block while we're not in one.
-    - match: \|>
+    - match: '{{atomic_end}}'
       scope: invalid.illegal.atomic_ending_nonatomic_block
     # Enter another block.
     - match: \{
@@ -265,7 +269,7 @@ contexts:
   # The type component of a formal parameter.
   formal_param_type:
     # TODO: deduplicate
-    - match: \b({{basic_types}})\b
+    - match: \b({{basic_type}})\b
       scope: storage.type.starling
       set: [formal_param_after_ident, formal_param_ident]
     - match: \b({{identifier}})\b
@@ -324,7 +328,7 @@ contexts:
       pop: true
 
   vardecls:
-    - match: \b({{environments}})\b
+    - match: \b({{environment}})\b
       scope: storage.modifier.starling
       set: [vardecl_after_typename, typename]
 
