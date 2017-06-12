@@ -1,0 +1,7 @@
+<snippet>
+	<content><![CDATA[
+view ${1:name}(${0});
+]]></content>
+	<tabTrigger>view</tabTrigger>
+	<scope>source.starling</scope>
+</snippet>
