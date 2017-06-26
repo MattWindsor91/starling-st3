@@ -150,6 +150,7 @@ contexts:
     - meta_scope: meta.block
     - include: views
     - include: keywords_block
+    - include: vardecls
     # Enter an atomic block.
     - match: '{{atomic_start}}'
       scope: punctuation.section.block.begin
@@ -330,7 +331,7 @@ contexts:
   vardecls:
     - match: \b({{environment}})\b
       scope: storage.modifier.starling
-      set: [vardecl_after_typename, typename]
+      push: [vardecl_after_typename, typename]
 
   #
   # Typedefs
