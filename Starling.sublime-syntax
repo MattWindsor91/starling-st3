@@ -77,10 +77,17 @@ contexts:
 
   typename:
     - match: \b({{basic_type}})\b
-      scope: storage.type.starling
+      scope: storage.type.basic.starling
       pop: true
     - match: \b({{identifier}})\b
-      scope: entity.name.type.starling
+      scope: storage.type.typedef.starling
+      pop: true
+
+  # A typedecl is like a typename, but is also the definition point of
+  # its type, and must be an identifier.
+  typedecl:
+    - match: \b({{identifier}})\b
+      scope: entity.name.type.typedef.starling
       pop: true
 
   # Keywords available at the block level.
@@ -271,10 +278,10 @@ contexts:
   formal_param_type:
     # TODO: deduplicate
     - match: \b({{basic_type}})\b
-      scope: storage.type.starling
+      scope: storage.type.builtin.starling
       set: [formal_param_after_ident, formal_param_ident]
     - match: \b({{identifier}})\b
-      scope: entity.name.type.starling
+      scope: storage.type.typedef.starling
       set: [formal_param_after_ident, formal_param_ident]
     # Anything else is not valid here.
     - match: '\S'
@@ -340,7 +347,7 @@ contexts:
   typedefs:
     - match: \b(typedef)\b
       scope: keyword.control.starling
-      set: [typename, typename]
+      set: [typedecl, typename]
 
   #
   # Symbolics
