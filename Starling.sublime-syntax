@@ -32,22 +32,24 @@ contexts:
   #
 
   block_comment:
-    - meta_scope: comment.block.starling
+    - meta_content_scope: comment.block.starling
+    # Starling block comments can be arbitrarily nested.
     - match: /\*
-      scope: punctuation.definition.comment.starling
+      scope: punctuation.definition.comment.begin.starling
       push: block_comment
     - match: \*/
+      scope: punctuation.definition.comment.end.starling
       pop: true
 
   comments:
     - match: //
       scope: punctuation.definition.comment.starling
       push:
-        - meta_scope: comment.line.double-slash.starling
+        - meta_content_scope: comment.line.double-slash.starling
         - match: \n
           pop: true
     - match: /\*
-      scope: punctuation.definition.comment.starling
+      scope: punctuation.definition.comment.begin.starling
       push: block_comment
 
   #
@@ -80,7 +82,6 @@ contexts:
       scope: storage.type.basic.starling
       pop: true
     - match: \b({{identifier}})\b
-      scope: storage.type.typedef.starling
       pop: true
 
   # A typedecl is like a typename, but is also the definition point of
@@ -311,7 +312,7 @@ contexts:
     - match: "iter"
       scope: keyword.other.iter.starling
     - match: \b({{identifier}})\b
-      scope: entity.name.atom.starling
+      scope: entity.name.function.atom.starling
       pop: true
     # Anything else is not valid here.
     - match: '\S'
@@ -346,7 +347,7 @@ contexts:
 
   typedefs:
     - match: \b(typedef)\b
-      scope: keyword.control.starling
+      scope: storage.type.typedef.starling
       set: [typedecl, typename]
 
   #
