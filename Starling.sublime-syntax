@@ -188,10 +188,17 @@ contexts:
     - match: '\S'
       scope: invalid.illegal.expected_method_body_here
 
-  # Wrapper around formal_param_list that applies the function scope.
+  # A method formal parameter list.
+  # (NB: this is different from an atom formal parameter list in that atoms
+  # with no parameters can omit the brackets.)
   method_formal_param_list:
     - meta_scope: meta.function.parameters
-    - include: formal_param_list
+    - match: \(
+      # TODO: add scopes
+      set: formal_param_list_begin
+    # Anything else is not valid here.
+    - match: '\S'
+      scope: invalid.illegal.missing_param_list
 
   method_name:
     - meta_scope: meta.function
@@ -216,13 +223,46 @@ contexts:
     - match: '{{view_start}}'
       scope: [punctuation.definition.string.begin,
               punctuation.section.braces.begin]
-      push:
-      - meta_scope: meta.braces
-      - meta_scope: string.view.starling
-      - match: '{{view_end}}'
-        scope: [punctuation.definition.string.end,
-                punctuation.section.braces.end]
-        pop: true
+      push: view_outer_block
+
+  # Matches inner blocks inside views.
+  view_inner_block:
+    - meta_scope: meta.braces
+    - meta_scope: string.view.starling
+    # Start of a view is illegal here.
+    - match: '{{view_start}}'
+      scope: invalid.illegal.nested_views
+    # End of a view is illegal here.
+    - match: '{{view_end}}'
+      scope: invalid.illegal.unbalanced_view_blocks
+    # Enter a block (TODO: match if-then-else, not just {)
+    - match: '\{'
+      scope: [punctuation.section.braces.begin]
+      push: view_inner_block
+    # End of a block
+    - match: '\}'
+      scope: [punctuation.section.braces.end]
+      pop: true
+
+  # Matches outer blocks inside views.
+  view_outer_block:
+    - meta_scope: meta.braces
+    - meta_scope: string.view.starling
+    # Start of a view is illegal here.
+    - match: '{{view_start}}'
+      scope: invalid.illegal.nested_views
+    # End of a view
+    - match: '{{view_end}}'
+      scope: [punctuation.definition.string.end,
+              punctuation.section.braces.end]
+      pop: true
+    # Enter a block (TODO: match if-then-else, not just {)
+    - match: '\{'
+      scope: [punctuation.section.braces.begin]
+      push: view_inner_block
+    # End of a block is illegal here.
+    - match: '\}'
+      scope: invalid.illegal.unbalanced_view_blocks
 
   # Like 'views', but marks a view in an incorrect place.
   # Used outside of methods, etc.
@@ -242,17 +282,6 @@ contexts:
   #
   # Function-like declarations
   #
-
-  atom_terminator:
-    # At the end of an atom, we can either see `,` and go back into an
-    # atom, or see `;` and end the entire atom list.
-    - match: \,
-      # TODO: correct scope
-      scope: punctuation.separator.atom.starling
-      set: [atom_terminator, formal_param_list, atom_name_or_qualifiers]
-    - match: ;
-      scope: punctuation.terminator.atom.starling
-      pop: true
 
   # Matches the aftermath of a formal parameter, which can either be
   # another parameter or the end of the list.
@@ -296,20 +325,33 @@ contexts:
     # The beginning of a formal parameter is its type.
     - include: formal_param_type
 
-  formal_param_list:
-    - match: \(
-      # TODO: add scopes
-      set: formal_param_list_begin
-    # Anything else is not valid here.
-    - match: '\S'
-      scope: invalid.illegal.missing_param_list
-
   #
   # View atoms
   #
 
+  atom_terminator:
+    # At the end of an atom, we can either see `,` and go back into an
+    # atom, or see `;` and end the entire atom list.
+    - match: \,
+      # TODO: correct scope
+      scope: punctuation.separator.atom.starling
+      set: [atom_formal_param_list, atom_name_or_qualifiers]
+    - match: ;
+      scope: punctuation.terminator.atom.starling
+      pop: true
+
+  atom_formal_param_list:
+    # Atoms can have missing parameter lists.
+    - include: atom_terminator
+    # If they do have parameter lists, we still expect a terminator afterwards.
+    - match: \(
+      set: [atom_terminator, formal_param_list_begin]
+    # Catch anything that isn't a parameter list or terminator.
+    - match: '\S'
+      scope: invalid.illegal.missing_param_list
+
   atom_name_or_qualifiers:
-    - match: "iter"
+    - match: iter
       scope: keyword.other.iter.starling
     - match: \b({{identifier}})\b
       scope: entity.name.function.atom.starling
@@ -321,7 +363,7 @@ contexts:
   atoms:
     - match: \b(view)\b
       scope: keyword.other.view.starling
-      set: [atom_terminator, formal_param_list, atom_name_or_qualifiers]
+      set: [atom_formal_param_list, atom_name_or_qualifiers]
 
   #
   # Variable declarations

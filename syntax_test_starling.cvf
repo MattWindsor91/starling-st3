@@ -1,23 +1,47 @@
 // SYNTAX TEST "Packages/Starling/Starling.sublime-syntax"
 
 // comment
-// ^ source.starling comment.line
+// ^^^^^^^ source.starling comment.line
 // <- punctuation.definition.comment
 
 /* block comment */
-// ^ source.starling comment.block
+// ^^^^^^^^^^^^^ source.starling comment.block
 // <- punctuation.definition.comment.begin
 //               ^ punctuation.definition.comment.end
 
 typedef int Node;
 // <- storage.type
-//      ^ storage.type
-//          ^ entity.name.type
+//      ^^^ storage.type
+//          ^^^^ entity.name.type
 
 thread int t;
 // <- storage.modifier
-//     ^ storage.type
+//     ^^^ storage.type
 //         ^ - storage.type
 
 shared Node f;
 // <- storage.modifier
+
+view Foo, Bar, Baz;
+//      ^ punctuation.separator
+//        ^^^ entity.name.function
+
+// Making sure that the view definition above closed properly.
+view Foobar();
+// <- keyword.other.view
+
+method example_method(int i) {
+//     ^^^^^^^^^^^^^^ meta.function entity.name.function
+	{| Foo * Bar() |}
+//     ^^^^^^^^^^^ string.view
+    if x == 5 {
+//  ^^ keyword.control
+//     ^ variable
+//       ^^ keyword.operator.logical
+//          ^ constant.numeric
+//            ^ punctuation.section.block.begin
+      <| y = z; |>
+    }
+//  ^ punctuation.section.block.end
+	{| Foo * Bar() |}
+}
